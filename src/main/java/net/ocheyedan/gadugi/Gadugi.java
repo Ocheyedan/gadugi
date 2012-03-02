@@ -3,7 +3,6 @@ package net.ocheyedan.gadugi;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.net.URLStreamHandlerFactory;
-import java.util.Map;
 
 /**
  * Date: 3/2/12
