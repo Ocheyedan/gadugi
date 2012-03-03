@@ -2,6 +2,10 @@ package net.ocheyedan.gadugi;
 
 import org.junit.Test;
 
+import java.lang.reflect.Field;
+
+import static junit.framework.Assert.assertNotNull;
+import static junit.framework.Assert.assertNull;
 import static junit.framework.Assert.fail;
 
 /**
@@ -9,19 +13,17 @@ import static junit.framework.Assert.fail;
  * Time: 4:17 PM
  * @author Trevor Smith
  * @author Brian Langel
- *
- * TODO - how to test as {@literal Gadugi} depends upon being set as the system classloader?
  */
 public class GadugiTest {
 
-    @Test
-    public void assertSystemClassloader() {
-        try {
-            Gadugi.using(null);
-            fail("Expected AssertionError as we're not testing (yet?) with Gadugi as the system classloader.");
-        } catch (AssertionError ae) {
-            // expected
-        }
+    @Test @SuppressWarnings("unchecked")
+    public void using() throws NoSuchFieldException, IllegalAccessException {
+        Field usingField = Gadugi.class.getDeclaredField("using");
+        usingField.setAccessible(true);
+
+        assertNull(((ThreadLocal<LibraryVersion>) usingField.get(null)).get());
+        Gadugi.using(new LibraryVersion() { });
+        assertNotNull(((ThreadLocal<LibraryVersion>) usingField.get(null)).get());
     }
 
 }
