@@ -4,7 +4,8 @@ import org.junit.Test;
 
 import java.lang.reflect.Field;
 
-import static junit.framework.Assert.*;
+import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertNull;
 
 /**
  * Date: 3/2/12

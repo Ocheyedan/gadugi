@@ -3,7 +3,6 @@ package net.ocheyedan.gadugi;
 import java.lang.reflect.Field;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Date: 3/2/12
