@@ -10,17 +10,11 @@ package net.ocheyedan.gadugi;
  */
 public class GadugiTestApp {
     
-    static class Thrift implements LibraryVersion {
-        static final Thrift Version2 = new Thrift() { };
-
-        static final Thrift Version3 = new Thrift() { };
-    }
-    
     public static void main(String[] args) {
-        Gadugi.using(Thrift.Version2);
+        Gadugi.using("thrift-version-2");
         Thrift2Code thrift2Code = new Thrift2Code();
         System.out.println(thrift2Code.toString());
-        Gadugi.using(Thrift.Version3);
+        Gadugi.using("thrift-version-3");
         Thrift3Code thrift3Code = new Thrift3Code();
         System.out.println(thrift3Code.toString());
     }

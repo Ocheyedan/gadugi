@@ -3,7 +3,7 @@ package net.ocheyedan.gadugi;
 import java.lang.reflect.Field;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.net.URLStreamHandlerFactory;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Date: 3/2/12
@@ -17,18 +17,18 @@ import java.net.URLStreamHandlerFactory;
  *     java -Djava.system.class.loader=net.ocheyedan.gadugi.Gadugi -cp YOUR_CLASSPATH YOUR_MAIN_CLASS
  * </pre>
  * <p/>
- * Within your application code make calls to {@link #using(LibraryVersion)} to set a particular library's version
+ * Within your application code make calls to {@link #using(String)} to set a particular library's version
  * before calling the library code.
  */
 public final class Gadugi extends URLClassLoader {
 
-    private static final ThreadLocal<LibraryVersion> using = new ThreadLocal<LibraryVersion>();
+    private static final ThreadLocal<String> using = new ThreadLocal<String>();
 
     /**
      * Sets the library version to use for the calling thread's subsequent invocations.
      * @param libraryVersion of the library to use on the calling thread.
      */
-    public static void using(LibraryVersion libraryVersion) {
+    public static void using(String libraryVersion) {
         using.set(libraryVersion);
     }
 
@@ -57,7 +57,8 @@ public final class Gadugi extends URLClassLoader {
     }
 
     @Override protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
-        Object libraryVersion = get(name);
+        // don't attempt to get on libraries known to not be using gadugi
+        String libraryVersion = (name.startsWith("java") ? null : get());
         // TODO - check libraryVersion against config map, delegating to the proper ClassLoader
         Class<?> clazz = super.loadClass(name, resolve);
         if (clazz.getClassLoader() == null) {
@@ -71,17 +72,13 @@ public final class Gadugi extends URLClassLoader {
     }
 
     /**
-     * Note, returning {@linkplain Object} as the {@link LibraryVersion} within the class-loader is the boot-classloader's
-     * version of the class and not that within the "user-land"'s {@link #using} variable.  It must be interacted
-     * with in an opaque manner.
-     * @param name of the {@link Class} which is being loaded.
-     * @return the "user-land" value of the {@link #using} variable.
+     * @return the "user-land" value of the {@link #using} variable or null if {@link Gadugi} has not yet been
+     *         loaded in the 'user-land'
      */
     @SuppressWarnings("unchecked")
-    private Object get(String name) {
-        if ("net.ocheyedan.gadugi.Gadugi".equals(name)) { // prevent circular-reference-errors
-            return null;
-        }
+    private String get() {
+        // prevent ClassCircularityError...do not attempt to retrieve the value of {@link #using} until
+        // the user's code has invoked the {@link #using(String)} method (i.e., user's Gadugi class has been loaded).
         Class<?> userGadugi = findLoadedClass("net.ocheyedan.gadugi.Gadugi");
         if (userGadugi == null) {
             return null;
@@ -89,14 +86,14 @@ public final class Gadugi extends URLClassLoader {
         try {
             Field usingField = userGadugi.getDeclaredField("using");
             usingField.setAccessible(true);
-            return ((ThreadLocal<Object>) usingField.get(null)).get();
+            return ((ThreadLocal<String>) usingField.get(null)).get();
         } catch (NoSuchFieldException nsfe) {
             throw new AssertionError(nsfe);
         } catch (IllegalAccessException iae) {
             throw new AssertionError(iae);
         }
     }
-    
+
     @Override public String toString() {
         return "Gadugi!";
     }

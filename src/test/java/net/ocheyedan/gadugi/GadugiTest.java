@@ -4,9 +4,7 @@ import org.junit.Test;
 
 import java.lang.reflect.Field;
 
-import static junit.framework.Assert.assertNotNull;
-import static junit.framework.Assert.assertNull;
-import static junit.framework.Assert.fail;
+import static junit.framework.Assert.*;
 
 /**
  * Date: 3/2/12
@@ -21,9 +19,9 @@ public class GadugiTest {
         Field usingField = Gadugi.class.getDeclaredField("using");
         usingField.setAccessible(true);
 
-        assertNull(((ThreadLocal<LibraryVersion>) usingField.get(null)).get());
-        Gadugi.using(new LibraryVersion() { });
-        assertNotNull(((ThreadLocal<LibraryVersion>) usingField.get(null)).get());
+        assertNull(((ThreadLocal<String>) usingField.get(null)).get());
+        Gadugi.using("test");
+        assertEquals("test", ((ThreadLocal<String>) usingField.get(null)).get());
     }
 
 }
