@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Date: 3/2/12
@@ -85,6 +86,12 @@ public final class Gadugi extends URLClassLoader {
      * string {@literal ""}.
      */
     private final ConcurrentMap<String, String> gadugiEncountered = new ConcurrentHashMap<String, String>();
+
+    /**
+     * The 'user-land' {@link #using} {@linkplain Field} value. This is a cache of the reflection look-up.
+     * @see #get()
+     */
+    private final AtomicReference<Field> usingField = new AtomicReference<Field>();
 
     public Gadugi(ClassLoader parent) {
         // parent will be sun.misc.Launcher$AppClassLoader - steal its URLs and its parent; in essence we're emulating it
@@ -198,9 +205,12 @@ public final class Gadugi extends URLClassLoader {
             return null;
         }
         try {
-            Field usingField = userGadugi.getDeclaredField("using");
-            usingField.setAccessible(true);
-            return ((ThreadLocal<String>) usingField.get(null)).get();
+            if (usingField.get() == null) { // not synchronized; at worst this will be called more than once
+                Field userUsingField = userGadugi.getDeclaredField("using");
+                userUsingField.setAccessible(true);
+                usingField.set(userUsingField);
+            }
+            return ((ThreadLocal<String>) usingField.get().get(null)).get();
         } catch (NoSuchFieldException nsfe) {
             throw new AssertionError(nsfe);
         } catch (IllegalAccessException iae) {

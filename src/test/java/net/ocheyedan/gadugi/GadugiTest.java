@@ -8,6 +8,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static junit.framework.Assert.*;
 
@@ -20,8 +21,9 @@ import static junit.framework.Assert.*;
 public class GadugiTest {
     
     @After
-    public void teardown() {
+    public void teardown() throws NoSuchFieldException {
         System.getProperties().remove("gadugi.config");
+        Gadugi.using(null);
     }
     
 
@@ -142,6 +144,62 @@ public class GadugiTest {
             assertEquals("Gadugi-thriftv4", ((ConcurrentMap<String, LibraryVersionLoader>) classLoadersField.get(gadugi)).get("thriftv4").toString());
         }
 
+    }
+
+    @Test @SuppressWarnings("unchecked")
+    public void get() throws NoSuchFieldException, NoSuchMethodException, IllegalAccessException,
+            InvocationTargetException, ClassNotFoundException {
+        // test that this sets the cached 'usingField' value
+        Gadugi gadugi = new Gadugi(GadugiTest.class.getClassLoader());
+
+        // ensure java classes are skipped altogether
+        Field usingFieldField = Gadugi.class.getDeclaredField("usingField");
+        usingFieldField.setAccessible(true);
+        assertNotNull(usingFieldField.get(gadugi));
+        assertNull(((AtomicReference<Field>) usingFieldField.get(gadugi)).get());
+        
+        Field usingField = Gadugi.class.getDeclaredField("using");
+        usingField.setAccessible(true);
+        assertNotNull(usingField.get(gadugi));
+        assertNull(((ThreadLocal<String>) usingField.get(gadugi)).get());
+
+        Method getMethod = Gadugi.class.getDeclaredMethod("get");
+        getMethod.setAccessible(true);
+
+        String result = (String) getMethod.invoke(gadugi);
+
+        assertNull(result);
+        assertNotNull(usingFieldField.get(gadugi));
+        assertNull(((AtomicReference<Field>) usingFieldField.get(gadugi)).get());
+        assertNotNull(usingField.get(gadugi));
+        assertNull(((ThreadLocal<String>) usingField.get(gadugi)).get());
+
+        System.setProperty("gadugi.config", "etc/gadugi/mock-1.properties"); // to have Configuration.get() succeed
+        Class userGadugiClass = gadugi.loadClass("net.ocheyedan.gadugi.Gadugi");
+        usingField = userGadugiClass.getDeclaredField("using");
+        usingField.setAccessible(true);
+
+        result = (String) getMethod.invoke(gadugi);
+
+        assertNull(result);
+        assertNotNull(usingFieldField.get(gadugi));
+        assertNotNull(((AtomicReference<Field>) usingFieldField.get(gadugi)).get());
+        assertNotSame(usingField, ((AtomicReference<Field>) usingFieldField.get(gadugi)).get());
+        assertNotNull(usingField.get(gadugi));
+        assertNull(((ThreadLocal<String>) usingField.get(gadugi)).get());
+
+        Method userGadugiUsingMethod = userGadugiClass.getDeclaredMethod("using", String.class);
+        userGadugiUsingMethod.invoke(null, "mock");
+
+        result = (String) getMethod.invoke(gadugi);
+
+        assertEquals("mock", result);
+        assertNotNull(usingFieldField.get(gadugi));
+        assertNotNull(((AtomicReference<Field>) usingFieldField.get(gadugi)).get());
+        assertNotSame(usingField, ((AtomicReference<Field>) usingFieldField.get(gadugi)).get());
+        assertNotNull(usingField.get(gadugi));
+        assertEquals("mock", ((ThreadLocal<String>) usingField.get(gadugi)).get());
+        
     }
 
 }
